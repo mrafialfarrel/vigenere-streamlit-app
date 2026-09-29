@@ -69,6 +69,7 @@ CSS = """
 html, body, [class*="css"], .stApp { font-family: 'Inter', 'Segoe UI', sans-serif; }
 .block-container { padding-top: 2rem; max-width: 1100px; }
 #MainMenu, footer { visibility: hidden; }
+[data-testid="InputInstructions"] { display: none; }
 
 .hero {
     background: linear-gradient(120deg, #0f172a 0%, #1e3a8a 60%, #2563eb 100%);
