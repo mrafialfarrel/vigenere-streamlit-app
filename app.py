@@ -68,15 +68,15 @@ def key_input(prefix: str) -> str:
     c1, c2 = st.columns([4, 1], vertical_alignment="bottom")
     show = c2.checkbox("Tampilkan", key=f"{prefix}_show")
     raw = c1.text_input(
-        "Kunci rahasia",
+        "Kunci",
         type="default" if show else "password",
         placeholder="contoh: SANDI",
-        help="Hanya huruf A–Z yang dipakai. Angka, spasi, dan simbol diabaikan.",
+        help="Hanya huruf A-Z yang dipakai. Angka, spasi, dan simbol diabaikan.",
         key=f"{prefix}_key",
     )
     key = clean_letters(raw)
     if raw and not key:
-        st.error("Kunci harus berisi minimal satu huruf (A–Z).")
+        st.error("Kunci harus berisi minimal satu huruf (A-Z).")
     elif key and key != raw.upper():
         st.caption(f"Kunci yang dipakai: **{key}**")
     return key
@@ -84,12 +84,12 @@ def key_input(prefix: str) -> str:
 
 def get_text(prefix: str, label: str, placeholder: str) -> str:
     text = st.text_area(label, height=150, placeholder=placeholder, key=f"{prefix}_txt")
-    with st.expander("Atau ambil dari file .txt"):
+    with st.expander("Atau unggah file .txt"):
         up = st.file_uploader("Pilih file .txt", type=["txt"], key=f"{prefix}_txtfile",
                               label_visibility="collapsed")
         if up is not None:
             text = up.getvalue().decode("utf-8", errors="ignore")
-            st.caption("Isi file dipakai sebagai pesan (kotak di atas diabaikan).")
+            st.caption("Isi file dipakai sebagai masukan, kotak teks di atas diabaikan.")
     return text
 
 
@@ -99,19 +99,19 @@ def section(number: int, title: str):
 
 # ------------------------------------------------------------------- Tab: enkripsi
 def tab_encrypt():
-    st.write("Ubah pesan biasa menjadi kode rahasia.")
-    section(1, "Apa yang ingin disandikan?")
-    kind = st.radio("Jenis", ["📝 Teks", "📁 File"], horizontal=True,
+    st.write("Ubah plainteks menjadi cipherteks.")
+    section(1, "Pilih jenis pesan")
+    kind = st.radio("Jenis", ["Teks", "File"], horizontal=True,
                     label_visibility="collapsed", key="enc_kind")
 
-    section(2, "Masukkan pesan")
+    section(2, "Masukkan plainteks")
     text, up = "", None
     if kind.endswith("Teks"):
-        text = get_text("enc", "Pesan", "Ketik pesan di sini, misalnya: Halo Dunia")
-        fmt = st.radio("Tampilan hasil", ["Tanpa spasi", "Per 5 huruf"], horizontal=True,
+        text = get_text("enc", "Plainteks", "Ketik plainteks di sini")
+        fmt = st.radio("Format cipherteks", ["Tanpa spasi", "Per 5 huruf"], horizontal=True,
                        key="enc_fmt")
     else:
-        up = st.file_uploader("Pilih file apa saja (gambar, dokumen, PDF, dll.)",
+        up = st.file_uploader("Pilih file (teks maupun biner)",
                               key="enc_file")
 
     section(3, "Masukkan kunci")
@@ -120,43 +120,43 @@ def tab_encrypt():
     st.divider()
     ready = bool(key) and (bool(clean_letters(text)) if up is None else up is not None)
     if not ready:
-        st.info("Lengkapi pesan dan kunci di atas, hasilnya akan muncul di sini.")
+        st.info("Isi plainteks dan kunci terlebih dahulu.")
         return
 
     section(4, "Hasil")
     if up is None:
         ct = vigenere_text(clean_letters(text), key)
         shown = group5(ct) if fmt == "Per 5 huruf" else ct
-        st.success("Pesan berhasil disandikan!")
+        st.success("Enkripsi berhasil.")
         st.code(shown, language=None)
-        st.caption("Hanya huruf yang disandikan; spasi, angka, dan tanda baca dibuang.")
-        st.download_button("💾 Simpan hasil (.txt)", shown, file_name="cipherteks.txt",
+        st.caption("Hanya huruf alfabet yang dienkripsi. Spasi, angka, dan tanda baca dibuang.")
+        st.download_button("Simpan hasil (.txt)", shown, file_name="cipherteks.txt",
                            mime="text/plain", type="primary")
     else:
         data = up.getvalue()
         out = encrypt_file(data, up.name, key)
-        st.success(f"File **{up.name}** ({len(data):,} byte) berhasil disandikan!")
-        st.download_button("💾 Unduh file sandi (.dat)", out,
+        st.success(f"File **{up.name}** ({len(data):,} byte) berhasil dienkripsi.")
+        st.download_button("Unduh file cipherteks (.dat)", out,
                            file_name=os.path.splitext(up.name)[0] + ".dat",
                            mime="application/octet-stream", type="primary")
         st.caption("Nama & jenis file asli ikut tersimpan, jadi otomatis kembali "
-                   "seperti semula saat dibuka sandinya.")
+                   "seperti semula saat didekripsi.")
 
 
 # ------------------------------------------------------------------- Tab: dekripsi
 def tab_decrypt():
-    st.write("Kembalikan kode rahasia menjadi pesan asli. Gunakan kunci yang sama "
-             "seperti saat menyandikan.")
-    section(1, "Apa yang ingin dibuka?")
-    kind = st.radio("Jenis", ["📝 Teks", "📁 File"], horizontal=True,
+    st.write("Kembalikan cipherteks menjadi plainteks. Gunakan kunci yang sama "
+             "seperti saat enkripsi.")
+    section(1, "Pilih jenis pesan")
+    kind = st.radio("Jenis", ["Teks", "File"], horizontal=True,
                     label_visibility="collapsed", key="dec_kind")
 
-    section(2, "Masukkan kode rahasia")
+    section(2, "Masukkan cipherteks")
     text, up = "", None
     if kind.endswith("Teks"):
-        text = get_text("dec", "Cipherteks", "Tempel kode di sini, misalnya: KHLPD XYZAB")
+        text = get_text("dec", "Cipherteks", "Tempel cipherteks di sini")
     else:
-        up = st.file_uploader("Pilih file sandi (.dat)", type=["dat"], key="dec_file")
+        up = st.file_uploader("Pilih file cipherteks (.dat)", type=["dat"], key="dec_file")
 
     section(3, "Masukkan kunci")
     key = key_input("dec")
@@ -164,47 +164,46 @@ def tab_decrypt():
     st.divider()
     ready = bool(key) and (bool(clean_letters(text)) if up is None else up is not None)
     if not ready:
-        st.info("Lengkapi kode dan kunci di atas, hasilnya akan muncul di sini.")
+        st.info("Isi cipherteks dan kunci terlebih dahulu.")
         return
 
     section(4, "Hasil")
     if up is None:
         pt = vigenere_text(clean_letters(text), key, decrypt=True)
-        st.success("Pesan berhasil dibuka!")
+        st.success("Dekripsi berhasil.")
         st.code(pt, language=None)
-        st.caption("Hasil berupa huruf kapital tanpa spasi (sesuai aturan Vigenere 26 huruf).")
-        st.download_button("💾 Simpan hasil (.txt)", pt, file_name="plainteks.txt",
+        st.caption("Hasil berupa huruf kapital tanpa spasi.")
+        st.download_button("Simpan hasil (.txt)", pt, file_name="plainteks.txt",
                            mime="text/plain", type="primary")
     else:
         result = decrypt_file(up.getvalue(), key)
         if result is None:
-            st.error("Gagal membuka file. Kemungkinan kunci salah, atau file ini bukan "
-                     "hasil dari aplikasi ini.")
+            st.error("Dekripsi gagal. Kunci salah atau file bukan hasil enkripsi dari aplikasi ini.")
             return
         name, data = result
-        st.success(f"File berhasil dipulihkan: **{name}** ({len(data):,} byte)")
-        st.download_button(f"💾 Unduh {name}", data, file_name=name,
+        st.success(f"File berhasil didekripsi: **{name}** ({len(data):,} byte)")
+        st.download_button(f"Unduh {name}", data, file_name=name,
                            mime="application/octet-stream", type="primary")
 
 
 # ------------------------------------------------------------------------- Main
-st.set_page_config(page_title="Vigenere Cipher", page_icon="🔐", layout="centered")
-st.title("🔐 Vigenere Cipher")
-st.caption("Sandikan dan buka sandi pesan teks maupun file dengan kunci rahasia.")
+st.set_page_config(page_title="Vigenere Cipher", layout="centered")
+st.title("Vigenere Cipher")
+st.caption("Enkripsi dan dekripsi pesan teks maupun file menggunakan Vigenere Cipher (26 huruf alfabet).")
 
-t1, t2 = st.tabs(["🔒 Sandikan (Enkripsi)", "🔓 Buka Sandi (Dekripsi)"])
+t1, t2 = st.tabs(["Enkripsi", "Dekripsi"])
 with t1:
     tab_encrypt()
 with t2:
     tab_decrypt()
 
-with st.expander("ℹ️ Cara kerja"):
+with st.expander("Cara kerja"):
     st.markdown(
         """
-- **Teks:** setiap huruf digeser sejauh huruf kunci (A=0 … Z=25), lalu kunci diulang.
-  Rumus: `C = (P + K) mod 26` dan `P = (C − K) mod 26`.
+- **Teks:** setiap huruf digeser sejauh huruf kunci (A=0 ... Z=25), lalu kunci diulang.
+  Rumus: `C = (P + K) mod 26` dan `P = (C - K) mod 26`.
 - **File:** seluruh byte dienkripsi dengan `C = (B + K) mod 256` agar file apa pun
-  (gambar, docx, dll.) bisa kembali persis sama.
-- Kunci salah → teks menghasilkan huruf acak, file akan ditolak dengan pesan error.
+  (gambar, docx, dan lainnya) bisa kembali persis sama.
+- Jika kunci salah, dekripsi teks menghasilkan huruf acak dan dekripsi file ditolak dengan pesan error.
         """
     )
