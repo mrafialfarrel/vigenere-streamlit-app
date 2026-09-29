@@ -72,7 +72,7 @@ html, body, [class*="css"], .stApp { font-family: 'Inter', 'Segoe UI', sans-seri
 [data-testid="InputInstructions"] { display: none; }
 
 .hero {
-    background: linear-gradient(120deg, #0f172a 0%, #1e3a8a 60%, #2563eb 100%);
+    background: linear-gradient(120deg, #111827 0%, #3b1f2b 55%, #ff4b4b 100%);
     border-radius: 16px; padding: 2rem 2.2rem; margin-bottom: 1.5rem; color: #fff;
 }
 .hero h1 { margin: 0; font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; color: #fff; }
@@ -88,7 +88,7 @@ button[data-baseweb="tab"] { font-size: 1rem; font-weight: 600; padding: 10px 22
 .step { display: flex; align-items: center; gap: 12px; margin: 1.1rem 0 .5rem 0; }
 .step:first-child { margin-top: .2rem; }
 .num {
-    width: 28px; height: 28px; border-radius: 50%; background: #2563eb; color: #fff;
+    width: 28px; height: 28px; border-radius: 50%; background: #ff4b4b; color: #fff;
     display: flex; align-items: center; justify-content: center;
     font-size: .85rem; font-weight: 600; flex-shrink: 0;
 }
@@ -97,12 +97,15 @@ button[data-baseweb="tab"] { font-size: 1rem; font-weight: 600; padding: 10px 22
 
 [data-testid="stVerticalBlockBorderWrapper"] { border-radius: 14px; }
 [data-testid="stMetric"] {
-    background: rgba(37,99,235,.08); border-radius: 10px; padding: 10px 14px;
+    background: rgba(255,75,75,.10); border-radius: 10px; padding: 10px 14px;
 }
 [data-testid="stMetricLabel"] { font-size: .8rem; }
 button[kind="primary"], .stDownloadButton button {
     border-radius: 10px; font-weight: 600; padding: .55rem 1.2rem;
 }
+button[kind="primary"] { background-color: #ff4b4b; border-color: #ff4b4b; color: #fff; }
+button[kind="primary"]:hover { background-color: #e03e3e; border-color: #e03e3e; color: #fff; }
+[data-baseweb="tab-highlight"] { background-color: #ff4b4b; }
 .foot { text-align: center; color: #94a3b8; font-size: .8rem; margin-top: 2rem; }
 </style>
 """
