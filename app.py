@@ -150,9 +150,77 @@ def metrics(items):
         col.metric(label, value)
 
 
+# ------------------------------------------------------------------- Proses
+def make_signature(kind, text, up, key, fmt):
+    """Ciri masukan saat ini, untuk mendeteksi hasil lama yang sudah tidak sesuai."""
+    if kind == "Teks":
+        return ("Teks", clean_letters(text), key, fmt)
+    return ("File", (up.name, up.size) if up is not None else None, key, fmt)
+
+
+def process(encrypting, kind, text, up, key, fmt):
+    """Jalankan enkripsi/dekripsi, kembalikan dict hasil atau dict error."""
+    if not key:
+        return {"error": "Kunci belum diisi."}
+    if kind == "Teks":
+        letters = clean_letters(text)
+        if not letters:
+            return {"error": "Tidak ada huruf alfabet pada pesan."}
+        out = vigenere_text(letters, key, decrypt=not encrypting)
+        if encrypting and fmt == "Kelompok 5 huruf":
+            out = group5(out)
+        return {"mode": "text", "out": out, "n": len(letters), "klen": len(key)}
+    if up is None:
+        return {"error": "Belum ada file yang dipilih."}
+    data = up.getvalue()
+    if encrypting:
+        out = encrypt_file(data, up.name, key)
+        return {"mode": "efile", "out": out, "orig": len(data), "size": len(out),
+                "name": up.name}
+    result = decrypt_file(data, key)
+    if result is None:
+        return {"error": "Dekripsi gagal. Kunci salah atau file bukan hasil "
+                         "enkripsi dari aplikasi ini."}
+    name, plain = result
+    return {"mode": "dfile", "out": plain, "name": name}
+
+
+def show_result(res, encrypting):
+    if res["mode"] == "text":
+        st.success("Enkripsi berhasil." if encrypting else "Dekripsi berhasil.")
+        st.code(res["out"], language=None)
+        metrics([("Huruf diproses", f"{res['n']:,}"), ("Panjang kunci", res["klen"])])
+        st.write("")
+        st.download_button(
+            "Simpan cipherteks (.txt)" if encrypting else "Simpan plainteks (.txt)",
+            res["out"], file_name="cipherteks.txt" if encrypting else "plainteks.txt",
+            mime="text/plain", type="primary", use_container_width=True)
+        if encrypting:
+            st.caption("Spasi, angka, dan tanda baca tidak ikut dienkripsi.")
+    elif res["mode"] == "efile":
+        st.success("File berhasil dienkripsi.")
+        metrics([("Ukuran asli", f"{res['orig']:,} B"),
+                 ("Ukuran hasil", f"{res['size']:,} B")])
+        st.write("")
+        st.download_button("Simpan cipherteks (.dat)", res["out"],
+                           file_name=os.path.splitext(res["name"])[0] + ".dat",
+                           mime="application/octet-stream", type="primary",
+                           use_container_width=True)
+        st.caption(f"Nama file asli ({res['name']}) tersimpan di dalam cipherteks, "
+                   "sehingga otomatis dipulihkan saat dekripsi.")
+    else:
+        st.success("File berhasil didekripsi.")
+        metrics([("Nama file", res["name"]), ("Ukuran", f"{len(res['out']):,} B")])
+        st.write("")
+        st.download_button(f"Simpan {res['name']}", res["out"], file_name=res["name"],
+                           mime="application/octet-stream", type="primary",
+                           use_container_width=True)
+
+
 # ------------------------------------------------------------------- Halaman
 def render(encrypting: bool):
     p = "enc" if encrypting else "dec"
+    label = "Enkripsi" if encrypting else "Dekripsi"
     left, right = st.columns([3, 2], gap="large")
 
     # ----- kolom kiri: input
@@ -180,57 +248,30 @@ def render(encrypting: bool):
             step(3, "Kunci")
             key = key_input(p)
 
+            st.write("")
+            run = st.button(label, type="primary", use_container_width=True,
+                            key=f"{p}_run")
+
+    sig = make_signature(kind, text, up, key, fmt)
+    if run:
+        res = process(encrypting, kind, text, up, key, fmt)
+        res["sig"] = sig
+        st.session_state[f"{p}_res"] = res
+
     # ----- kolom kanan: hasil
     with right:
         with st.container(border=True):
             st.markdown('<div class="rtitle">Hasil</div>', unsafe_allow_html=True)
-            has_input = bool(clean_letters(text)) if up is None else up is not None
-            if not (key and has_input):
-                st.info("Isi pesan dan kunci di sebelah kiri, hasil akan tampil di sini.")
-                return
-
-            if up is None:
-                letters = clean_letters(text)
-                out = vigenere_text(letters, key, decrypt=not encrypting)
-                if encrypting and fmt == "Kelompok 5 huruf":
-                    out = group5(out)
-                st.success("Enkripsi berhasil." if encrypting else "Dekripsi berhasil.")
-                st.code(out, language=None)
-                metrics([("Huruf diproses", f"{len(letters):,}"),
-                         ("Panjang kunci", len(key))])
-                st.write("")
-                st.download_button(
-                    "Simpan cipherteks (.txt)" if encrypting else "Simpan plainteks (.txt)",
-                    out, file_name="cipherteks.txt" if encrypting else "plainteks.txt",
-                    mime="text/plain", type="primary", use_container_width=True)
-                if encrypting:
-                    st.caption("Spasi, angka, dan tanda baca tidak ikut dienkripsi.")
-            elif encrypting:
-                data = up.getvalue()
-                out = encrypt_file(data, up.name, key)
-                st.success("File berhasil dienkripsi.")
-                metrics([("Ukuran asli", f"{len(data):,} B"),
-                         ("Ukuran hasil", f"{len(out):,} B")])
-                st.write("")
-                st.download_button("Unduh cipherteks (.dat)", out,
-                                   file_name=os.path.splitext(up.name)[0] + ".dat",
-                                   mime="application/octet-stream", type="primary",
-                                   use_container_width=True)
-                st.caption(f"Nama file asli ({up.name}) tersimpan di dalam cipherteks, "
-                           "sehingga otomatis dipulihkan saat dekripsi.")
+            res = st.session_state.get(f"{p}_res")
+            if res is None:
+                st.info(f"Isi pesan dan kunci, lalu klik tombol {label}.")
+            elif res["sig"] != sig:
+                st.warning(f"Masukan sudah berubah. Klik tombol {label} lagi untuk "
+                           "memperbarui hasil.")
+            elif "error" in res:
+                st.error(res["error"])
             else:
-                result = decrypt_file(up.getvalue(), key)
-                if result is None:
-                    st.error("Dekripsi gagal. Kunci salah atau file bukan hasil "
-                             "enkripsi dari aplikasi ini.")
-                    return
-                name, data = result
-                st.success("File berhasil didekripsi.")
-                metrics([("Nama file", name), ("Ukuran", f"{len(data):,} B")])
-                st.write("")
-                st.download_button(f"Unduh {name}", data, file_name=name,
-                                   mime="application/octet-stream", type="primary",
-                                   use_container_width=True)
+                show_result(res, encrypting)
 
 
 # ------------------------------------------------------------------------- Main
